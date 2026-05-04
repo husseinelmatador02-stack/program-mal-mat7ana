@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة المطحنة</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f0;color:#1a2e1a;direction:rtl;min-height:100vh;overflow-x:hidden;}
+.topbar{background:linear-gradient(135deg,#1D9E75,#0F6E56);color:white;padding:13px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,0.18);-webkit-app-region:drag;}
+.topbar .logo{font-size:26px;}
+.topbar h1{font-size:19px;font-weight:700;}
+.topbar p{font-size:12px;opacity:0.8;margin-top:2px;}
+.topbar-actions{margin-right:auto;display:flex;gap:8px;-webkit-app-region:no-drag;}
+.tbtn{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:white;padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;transition:background 0.15s;}
+.tbtn:hover{background:rgba(255,255,255,0.3);}
+.tbtn.archive-btn{background:rgba(255,200,50,0.25);border-color:rgba(255,200,50,0.5);}
+.tbtn.archive-btn:hover{background:rgba(255,200,50,0.4);}
+.db-path{font-size:11px;opacity:0.65;margin-right:8px;}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 24px 8px;}
+.stat{background:white;border-radius:10px;padding:13px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+.stat-label{font-size:11px;color:#666;margin-bottom:5px;}
+.stat-val{font-size:22px;font-weight:700;}
+.stat-val.green{color:#0F6E56;}
+.stat-val.red{color:#c0392b;}
+.stat-val.blue{color:#1a5fa8;}
+.stat-val.amber{color:#b8600a;}
+.stat-val.pink{color:#8e2a5a;}
+.tabs{display:flex;gap:0;padding:0 24px;border-bottom:2px solid #c8e6c9;margin-top:8px;}
+.tab{padding:10px 20px;font-size:14px;cursor:pointer;border:none;background:none;color:#666;font-family:inherit;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.15s;font-weight:500;}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;background:white;}
+.tab:hover:not(.active){color:#1D9E75;}
+.tab.archive-tab{color:#b8600a;}
+.tab.archive-tab.active{color:#b8600a;border-bottom-color:#b8600a;}
+.content{padding:18px 24px;overflow-y:auto;height:calc(100vh - 220px);}
+.section{display:none;}
+.section.active{display:block;}
+.card{background:white;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,0.07);margin-bottom:14px;}
+.card h3{font-size:14px;font-weight:600;color:#1D9E75;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #e8f5ee;}
+.card.amber-card h3{color:#b8600a;border-bottom-color:#faeeda;}
+.form-row{display:grid;gap:10px;margin-bottom:10px;}
+.fr2{grid-template-columns:1fr 1fr;}
+.fr3{grid-template-columns:1fr 1fr 1fr;}
+.fr4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.fr5{grid-template-columns:1fr 1fr 1fr 1fr 1fr;}
+.fr6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;}
+.form-group{display:flex;flex-direction:column;gap:3px;}
+.form-group label{font-size:11px;color:#555;font-weight:600;}
+.form-group input,.form-group select{padding:7px 10px;border:1px solid #cde0d0;border-radius:7px;font-size:13px;font-family:inherit;background:#fafff9;color:#1a2e1a;transition:border 0.15s;direction:rtl;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#1D9E75;background:white;}
+.form-group input[readonly]{background:#f0f8f4;font-weight:700;color:#0F6E56;}
+.btn-row{display:flex;gap:10px;align-items:center;}
+.btn{padding:8px 20px;border-radius:7px;font-size:13px;cursor:pointer;border:none;font-family:inherit;font-weight:600;transition:all 0.15s;}
+.btn.primary{background:#1D9E75;color:white;}
+.btn.primary:hover{background:#0F6E56;}
+.btn.amber{background:#e67e22;color:white;}
+.btn.amber:hover{background:#ca6f1e;}
+.btn.danger{background:#c0392b;color:white;padding:4px 11px;font-size:12px;}
+.btn.danger:hover{background:#a93226;}
+.btn.success{background:#0F6E56;color:white;padding:4px 11px;font-size:12px;}
+.btn.warning{background:#e67e22;color:white;padding:4px 11px;font-size:12px;}
+.btn.info{background:#1a5fa8;color:white;padding:4px 11px;font-size:12px;}
+.msg{padding:9px 13px;border-radius:7px;font-size:13px;margin-bottom:10px;display:none;}
+.msg.ok{background:#e8f8f2;color:#085041;border:1px solid #9fdfc4;display:block;}
+.msg.err{background:#fdecea;color:#7b1a0e;border:1px solid #f5a9a5;display:block;}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.search{padding:7px 11px;border:1px solid #cde0d0;border-radius:7px;font-size:13px;font-family:inherit;width:220px;direction:rtl;background:#fafff9;}
+.search:focus{outline:none;border-color:#1D9E75;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:#f0f8f4;}
+th{text-align:right;padding:9px 11px;font-weight:600;color:#2d6a4f;border-bottom:2px solid #c8e6c9;white-space:nowrap;}
+td{padding:8px 11px;border-bottom:1px solid #eaf4ed;color:#2c3e2c;white-space:nowrap;}
+tr:hover td{background:#f7fdf9;}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;}
+.badge.kash{background:#e8f8f2;color:#085041;}
+.badge.ajel{background:#fff3cd;color:#7d4e00;}
+.badge.partial{background:#e8eaf6;color:#283593;}
+.badge.pending{background:#ffebe8;color:#7b1a0e;}
+.badge.paid{background:#e8f8f2;color:#085041;}
+.badge.ton{background:#e8eaf6;color:#283593;}
+.badge.kg{background:#f0f8f4;color:#085041;}
+.empty-row td{text-align:center;color:#999;padding:2rem;font-size:13px;}
+.total-row td{font-weight:700;background:#f0f8f4;color:#0F6E56;}
+.save-indicator{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0F6E56;color:white;padding:8px 20px;border-radius:999px;font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+.save-indicator.show{opacity:1;}
+.archive-list{display:flex;flex-direction:column;gap:10px;}
+.archive-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fffbf0;border:1px solid #faeeda;border-radius:10px;}
+.archive-item .arc-label{font-size:14px;font-weight:600;color:#7d4e00;flex:1;}
+.archive-item .arc-date{font-size:12px;color:#999;}
+.viewing-banner{background:#fff3cd;border:1px solid #f0c040;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;font-size:13px;color:#7d4e00;}
+.viewing-banner b{font-size:14px;}
+@media print {
+  @page{margin:1.5cm;size:A4;}
+  body{background:white!important;}
+  .topbar{background:#1D9E75!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:10px 16px;margin-bottom:12px;}
+  .topbar .topbar-actions,.topbar .db-path{display:none!important;}
+  .stats{padding:0;margin-bottom:12px;}
+  .stat{box-shadow:none;border:1px solid #cde0d0;}
+  .tabs{display:none!important;}
+  .content{height:auto!important;overflow:visible!important;padding:0;}
+  .section{display:block!important;margin-bottom:20px;}
+  .card{box-shadow:none;border:1px solid #cde0d0;page-break-inside:avoid;}
+  .btn-row,.toolbar,.btn,.save-indicator,.viewing-banner{display:none!important;}
+  thead tr{background:#e0f0e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .total-row td{background:#f0f8f4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">🌾</span>
+  <div>
+    <h1>نظام إدارة المطحنة</h1>
+    <p id="mode-label">وردات · صادرات · مبيعات · مشتريات · سلف</p>
+  </div>
+  <div class="topbar-actions">
+    <span class="db-path" id="db-path-label">📂 ...</span>
+    <button class="tbtn archive-btn" onclick="showArchiveModal()">📅 أرشفة الشهر</button>
+    <button class="tbtn" onclick="doExport()">💾 نسخة احتياطية</button>
+    <button class="tbtn" onclick="doImport()">📂 استيراد نسخة</button>
+    <button class="tbtn" onclick="doPrint()">🖨️ طباعة</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">إجمالي الوردات (كغ)</div><div class="stat-val green" id="st-in">0</div></div>
+  <div class="stat"><div class="stat-label">إجمالي الصادرات (كغ)</div><div class="stat-val red" id="st-out">0</div></div>
+  <div class="stat"><div class="stat-label">إجمالي المبيعات (د.ع)</div><div class="stat-val blue" id="st-sales">0</div></div>
+  <div class="stat"><div class="stat-label">إجمالي المشتريات (د.ع)</div><div class="stat-val amber" id="st-buys">0</div></div>
+  <div class="stat"><div class="stat-label">السلف المعلقة (د.ع)</div><div class="stat-val pink" id="st-loans">0</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('ward',this)">📥 الوردات</button>
+  <button class="tab" onclick="switchTab('sadir',this)">📤 الصادرات</button>
+  <button class="tab" onclick="switchTab('sales',this)">💰 المبيعات</button>
+  <button class="tab" onclick="switchTab('buys',this)">🛒 المشتريات</button>
+  <button class="tab" onclick="switchTab('loans',this)">💳 السلف</button>
+  <button class="tab archive-tab" onclick="switchTab('archives',this)">📅 الأرشيف</button>
+</div>
+
+<div class="content">
+
+<!-- وردات -->
+<div id="tab-ward" class="section active">
+  <div id="view-banner-ward" class="viewing-banner" style="display:none"></div>
+  <div class="card">
+    <h3>تسجيل واردة جديدة</h3>
+    <div id="msg-ward" class="msg"></div>
+    <div class="form-row fr6">
+      <div class="form-group"><label>التاريخ</label><input type="date" id="w-date"></div>
+      <div class="form-group"><label>اسم المورد</label><input type="text" id="w-name" placeholder="مثال: أبو علي"></div>
+      <div class="form-group"><label>نوع المادة</label><input type="text" id="w-type" placeholder="قمح / شعير / ذرة"></div>
+      <div class="form-group"><label>الوزن</label><input type="number" id="w-kg" placeholder="0" min="0"></div>
+      <div class="form-group"><label>الوحدة</label><select id="w-unit"><option value="كغ">كغ</option><option value="طن">طن</option></select></div>
+      <div class="form-group"><label>ملاحظة</label><input type="text" id="w-note" placeholder="اختياري"></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="addWard()">+ تسجيل واردة</button></div>
+  </div>
+  <div class="card">
+    <h3>سجل الوردات</h3>
+    <div class="toolbar"><input class="search" type="text" placeholder="بحث بالاسم..." oninput="renderWard(this.value)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>التاريخ</th><th>اسم المورد</th><th>نوع المادة</th><th>الوزن</th><th>الوحدة</th><th>ملاحظة</th><th>حذف</th></tr></thead>
+        <tbody id="tb-ward"></tbody>
+        <tfoot><tr class="total-row"><td colspan="4">المجموع (كغ)</td><td id="tot-ward-kg">0</td><td colspan="3"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- صادرات -->
+<div id="tab-sadir" class="section">
+  <div class="card">
+    <h3>تسجيل صادرة جديدة</h3>
+    <div id="msg-sadir" class="msg"></div>
+    <div class="form-row fr6">
+      <div class="form-group"><label>التاريخ</label><input type="date" id="s-date"></div>
+      <div class="form-group"><label>اسم المستلم</label><input type="text" id="s-name" placeholder="مثال: أبو محمد"></div>
+      <div class="form-group"><label>نوع المادة</label><input type="text" id="s-type" placeholder="دقيق / نخالة"></div>
+      <div class="form-group"><label>الوزن</label><input type="number" id="s-kg" placeholder="0" min="0"></div>
+      <div class="form-group"><label>الوحدة</label><select id="s-unit"><option value="كغ">كغ</option><option value="طن">طن</option></select></div>
+      <div class="form-group"><label>ملاحظة</label><input type="text" id="s-note" placeholder="اختياري"></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="addSadir()">+ تسجيل صادرة</button></div>
+  </div>
+  <div class="card">
+    <h3>سجل الصادرات</h3>
+    <div class="toolbar"><input class="search" type="text" placeholder="بحث بالاسم..." oninput="renderSadir(this.value)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>التاريخ</th><th>المستلم</th><th>نوع المادة</th><th>الوزن</th><th>الوحدة</th><th>ملاحظة</th><th>حذف</th></tr></thead>
+        <tbody id="tb-sadir"></tbody>
+        <tfoot><tr class="total-row"><td colspan="4">المجموع (كغ)</td><td id="tot-sadir-kg">0</td><td colspan="3"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- مبيعات -->
+<div id="tab-sales" class="section">
+  <div class="card">
+    <h3>تسجيل مبيعة جديدة</h3>
+    <div id="msg-sales" class="msg"></div>
+    <div class="form-row fr5">
+      <div class="form-group"><label>التاريخ</label><input type="date" id="sa-date"></div>
+      <div class="form-group"><label>الزبون</label><input type="text" id="sa-name" placeholder="اسم الزبون"></div>
+      <div class="form-group"><label>المادة</label><input type="text" id="sa-item" placeholder="دقيق / نخالة"></div>
+      <div class="form-group"><label>الكمية</label><input type="number" id="sa-kg" placeholder="0" min="0" oninput="calcTotal()"></div>
+      <div class="form-group"><label>الوحدة</label><select id="sa-unit" onchange="calcTotal()"><option value="كغ">كغ</option><option value="طن">طن</option></select></div>
+    </div>
+    <div class="form-row fr4">
+      <div class="form-group"><label>السعر للكغ (د.ع)</label><input type="number" id="sa-price" placeholder="0" min="0" oninput="calcTotal()"></div>
+      <div class="form-group"><label>الإجمالي (د.ع)</label><input type="text" id="sa-total" placeholder="0" readonly></div>
+      <div class="form-group"><label>طريقة الدفع</label><select id="sa-pay"><option value="كاش">كاش</option><option value="آجل">آجل</option><option value="جزئي">جزئي</option></select></div>
+      <div class="form-group"><label>ملاحظة</label><input type="text" id="sa-note" placeholder="اختياري"></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="addSale()">+ تسجيل مبيعة</button></div>
+  </div>
+  <div class="card">
+    <h3>سجل المبيعات</h3>
+    <div class="toolbar"><input class="search" type="text" placeholder="بحث بالاسم..." oninput="renderSales(this.value)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>التاريخ</th><th>الزبون</th><th>المادة</th><th>الكمية</th><th>الوحدة</th><th>سعر/كغ</th><th>الإجمالي (د.ع)</th><th>الدفع</th><th>ملاحظة</th><th>حذف</th></tr></thead>
+        <tbody id="tb-sales"></tbody>
+        <tfoot><tr class="total-row"><td colspan="7">المجموع</td><td id="tot-sales">0</td><td colspan="3"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- مشتريات -->
+<div id="tab-buys" class="section">
+  <div class="card">
+    <h3>تسجيل مشتراة جديدة</h3>
+    <div id="msg-buys" class="msg"></div>
+    <div class="form-row fr4">
+      <div class="form-group"><label>التاريخ</label><input type="date" id="b-date"></div>
+      <div class="form-group"><label>المورد</label><input type="text" id="b-name" placeholder="اسم المورد"></div>
+      <div class="form-group"><label>المادة / الصنف</label><input type="text" id="b-item" placeholder="قطع غيار / قمح"></div>
+      <div class="form-group"><label>الكمية / الوصف</label><input type="text" id="b-qty" placeholder="100 كغ أو قطعة"></div>
+    </div>
+    <div class="form-row fr2">
+      <div class="form-group"><label>المبلغ (د.ع)</label><input type="number" id="b-amount" placeholder="0" min="0"></div>
+      <div class="form-group"><label>ملاحظة</label><input type="text" id="b-note" placeholder="اختياري"></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="addBuy()">+ تسجيل مشتراة</button></div>
+  </div>
+  <div class="card">
+    <h3>سجل المشتريات</h3>
+    <div class="toolbar"><input class="search" type="text" placeholder="بحث بالمورد..." oninput="renderBuys(this.value)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>التاريخ</th><th>المورد</th><th>المادة</th><th>الكمية</th><th>المبلغ (د.ع)</th><th>ملاحظة</th><th>حذف</th></tr></thead>
+        <tbody id="tb-buys"></tbody>
+        <tfoot><tr class="total-row"><td colspan="5">المجموع</td><td id="tot-buys">0</td><td colspan="2"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- سلف -->
+<div id="tab-loans" class="section">
+  <div class="card">
+    <h3>تسجيل سلفة جديدة</h3>
+    <div id="msg-loans" class="msg"></div>
+    <div class="form-row fr3">
+      <div class="form-group"><label>التاريخ</label><input type="date" id="l-date"></div>
+      <div class="form-group"><label>اسم المقترض</label><input type="text" id="l-name" placeholder="اسم الشخص"></div>
+      <div class="form-group"><label>المبلغ (د.ع)</label><input type="number" id="l-amount" placeholder="0" min="0"></div>
+    </div>
+    <div class="form-row fr2">
+      <div class="form-group"><label>السبب / الملاحظة</label><input type="text" id="l-note" placeholder="سلفة شخصية / سلفة راتب"></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="addLoan()">+ تسجيل سلفة</button></div>
+  </div>
+  <div class="card">
+    <h3>سجل السلف</h3>
+    <div class="toolbar"><input class="search" type="text" placeholder="بحث بالاسم..." oninput="renderLoans(this.value)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>التاريخ</th><th>المقترض</th><th>المبلغ (د.ع)</th><th>الملاحظة</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+        <tbody id="tb-loans"></tbody>
+        <tfoot><tr class="total-row"><td colspan="3">المجموع المعلق</td><td id="tot-loans">0</td><td colspan="4"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- الأرشيف -->
+<div id="tab-archives" class="section">
+  <div class="card amber-card">
+    <h3>📅 أرشفة الشهر الحالي وبدء شهر جديد</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:14px;">عند الأرشفة: تُحفظ كل بيانات الشهر الحالي، ثم يبدأ البرنامج من صفر للشهر الجديد.</p>
+    <div class="form-row fr3">
+      <div class="form-group">
+        <label>اسم الشهر للأرشيف</label>
+        <input type="text" id="arc-label" placeholder="مثال: مايو-2026">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn amber" onclick="doArchive()">📅 أرشف الشهر وابدأ من جديد</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>سجل الأشهر المحفوظة</h3>
+    <div id="archive-list" class="archive-list">
+      <div style="text-align:center;color:#999;padding:2rem;">لا توجد أشهر مؤرشفة بعد</div>
+    </div>
+  </div>
+</div>
+
+</div>
+<div class="save-indicator" id="save-ind">✓ تم الحفظ</div>
+
+<script>
+let D = { ward:[], sadir:[], sales:[], buys:[], loans:[] };
+let isViewing = false;
+let viewingLabel = '';
+const today = new Date().toISOString().split('T')[0];
+['w-date','s-date','sa-date','b-date','l-date'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=today;});
+
+// اقتراح اسم الشهر تلقائياً
+const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const now = new Date();
+document.getElementById('arc-label').value = `${months[now.getMonth()]}-${now.getFullYear()}`;
+
+async function init() {
+  D = await window.mill.load();
+  const p = await window.mill.getPath();
+  document.getElementById('db-path-label').textContent = '📂 ' + p;
+  updateStats(); renderWard(); renderSadir(); renderSales(); renderBuys(); renderLoans(); renderArchives();
+}
+
+async function save() {
+  if(isViewing) return;
+  await window.mill.save(D);
+  updateStats();
+  const ind = document.getElementById('save-ind');
+  ind.classList.add('show');
+  setTimeout(()=>ind.classList.remove('show'), 1800);
+}
+
+async function doExport() {
+  const ok = await window.mill.exportBackup();
+  if(ok) alert('تم حفظ النسخة الاحتياطية بنجاح ✓');
+}
+
+async function doImport() {
+  if(!confirm('سيتم استبدال البيانات الحالية. تأكيد؟')) return;
+  const data = await window.mill.importBackup();
+  if(data){ D=data; updateStats(); renderWard(); renderSadir(); renderSales(); renderBuys(); renderLoans(); alert('تم استيراد البيانات بنجاح ✓'); }
+}
+
+async function doArchive() {
+  const label = document.getElementById('arc-label').value.trim();
+  if(!label){ alert('يرجى إدخال اسم الشهر'); return; }
+  if(!confirm(`سيتم حفظ بيانات "${label}" وبدء شهر جديد فارغ. تأكيد؟`)) return;
+  const res = await window.mill.archiveMonth(label);
+  if(res.success){
+    D = { ward:[], sadir:[], sales:[], buys:[], loans:[] };
+    updateStats(); renderWard(); renderSadir(); renderSales(); renderBuys(); renderLoans(); renderArchives();
+    const months2 = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const n2 = new Date();
+    document.getElementById('arc-label').value = `${months2[n2.getMonth()]}-${n2.getFullYear()}`;
+    alert(`تم أرشفة شهر "${label}" بنجاح ✓\nالبرنامج جاهز للشهر الجديد!`);
+  } else { alert('حدث خطأ أثناء الأرشفة'); }
+}
+
+async function renderArchives() {
+  const list = await window.mill.getArchives();
+  const el = document.getElementById('archive-list');
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:#999;padding:2rem;">لا توجد أشهر مؤرشفة بعد</div>'; return; }
+  el.innerHTML = list.map(a=>`
+    <div class="archive-item">
+      <span style="font-size:22px;">📅</span>
+      <span class="arc-label">${a.label}</span>
+      <button class="btn info" onclick="viewArchive('${a.file}','${a.label}')">👁 عرض</button>
+      <button class="btn danger" onclick="deleteArchive('${a.file}','${a.label}')">حذف</button>
+    </div>
+  `).join('');
+}
+
+async function viewArchive(file, label) {
+  const data = await window.mill.loadArchive(file);
+  if(!data){ alert('تعذر تحميل الأرشيف'); return; }
+  isViewing = true;
+  viewingLabel = label;
+  D = data;
+  document.getElementById('mode-label').textContent = `📅 تصفح أرشيف: ${label}`;
+  updateStats(); renderWard(); renderSadir(); renderSales(); renderBuys(); renderLoans();
+  switchTab('ward', document.querySelector('.tab'));
+  alert(`أنت الآن تعرض بيانات شهر "${label}"\nهذا للعرض فقط — لا يمكن التعديل.`);
+}
+
+async function deleteArchive(file, label) {
+  if(!confirm(`هل تريد حذف أرشيف "${label}" نهائياً؟`)) return;
+  await window.mill.deleteArchive(file);
+  renderArchives();
+}
+
+function exitViewing() {
+  isViewing = false;
+  viewingLabel = '';
+  document.getElementById('mode-label').textContent = 'وردات · صادرات · مبيعات · مشتريات · سلف';
+  init();
+}
+
+function doPrint() {
+  document.querySelectorAll('.section').forEach(s=>s.style.display='block');
+  window.print();
+  setTimeout(()=>{ document.querySelectorAll('.section').forEach(s=>s.style.display=''); document.querySelector('.section.active').style.display='block'; }, 500);
+}
+
+function num(n){return (+n||0).toLocaleString('ar-IQ');}
+function toKg(val,unit){ return unit==='طن'?(+val||0)*1000:(+val||0); }
+
+function updateStats(){
+  document.getElementById('st-in').textContent=num(D.ward.reduce((a,r)=>a+toKg(r.kg,r.unit),0));
+  document.getElementById('st-out').textContent=num(D.sadir.reduce((a,r)=>a+toKg(r.kg,r.unit),0));
+  document.getElementById('st-sales').textContent=num(D.sales.reduce((a,r)=>a+(+r.total||0),0));
+  document.getElementById('st-buys').textContent=num(D.buys.reduce((a,r)=>a+(+r.amount||0),0));
+  document.getElementById('st-loans').textContent=num(D.loans.filter(r=>r.status==='معلق').reduce((a,r)=>a+(+r.amount||0),0));
+}
+
+function switchTab(t,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(el) el.classList.add('active');
+  if(t==='archives') renderArchives();
+}
+
+function showMsg(id,txt,type='ok'){const e=document.getElementById('msg-'+id);e.textContent=txt;e.className='msg '+type;setTimeout(()=>{e.className='msg';},2800);}
+function calcTotal(){const kg=+document.getElementById('sa-kg').value||0,unit=document.getElementById('sa-unit').value,pr=+document.getElementById('sa-price').value||0,kgVal=unit==='طن'?kg*1000:kg;document.getElementById('sa-total').value=(kgVal*pr).toLocaleString('ar-IQ');}
+function v(id){return document.getElementById(id).value.trim();}
+function n(id){return +document.getElementById(id).value||0;}
+function sel(id){return document.getElementById(id).value;}
+function clr(...ids){ids.forEach(id=>{document.getElementById(id).value=''});}
+
+function addWard(){
+  if(isViewing){alert('أنت في وضع العرض فقط');return;}
+  const name=v('w-name'),kg=n('w-kg');
+  if(!name||!kg){showMsg('ward','يرجى إدخال اسم المورد والوزن','err');return;}
+  D.ward.unshift({date:v('w-date'),name,type:v('w-type'),kg,unit:sel('w-unit'),note:v('w-note')});
+  save();renderWard();clr('w-name','w-type','w-kg','w-note');showMsg('ward','تم تسجيل الواردة بنجاح ✓');
+}
+function renderWard(q=''){
+  const rows=q?D.ward.filter(r=>r.name.includes(q)):D.ward;
+  const tb=document.getElementById('tb-ward');
+  const viewBtns = isViewing ? '' : '';
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="8">لا توجد وردات مسجلة</td></tr>';document.getElementById('tot-ward-kg').textContent='0';return;}
+  tb.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.date}</td><td><b>${r.name}</b></td><td>${r.type||'-'}</td><td><b>${num(r.kg)}</b></td><td><span class="badge ${r.unit==='طن'?'ton':'kg'}">${r.unit||'كغ'}</span></td><td>${r.note||'-'}</td><td>${isViewing?'-':`<button class="btn danger" onclick="del('ward',${D.ward.indexOf(r)})">حذف</button>`}</td></tr>`).join('');
+  document.getElementById('tot-ward-kg').textContent=num(rows.reduce((a,r)=>a+toKg(r.kg,r.unit),0));
+}
+
+function addSadir(){
+  if(isViewing){alert('أنت في وضع العرض فقط');return;}
+  const name=v('s-name'),kg=n('s-kg');
+  if(!name||!kg){showMsg('sadir','يرجى إدخال اسم المستلم والوزن','err');return;}
+  D.sadir.unshift({date:v('s-date'),name,type:v('s-type'),kg,unit:sel('s-unit'),note:v('s-note')});
+  save();renderSadir();clr('s-name','s-type','s-kg','s-note');showMsg('sadir','تم تسجيل الصادرة بنجاح ✓');
+}
+function renderSadir(q=''){
+  const rows=q?D.sadir.filter(r=>r.name.includes(q)):D.sadir;
+  const tb=document.getElementById('tb-sadir');
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="8">لا توجد صادرات مسجلة</td></tr>';document.getElementById('tot-sadir-kg').textContent='0';return;}
+  tb.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.date}</td><td><b>${r.name}</b></td><td>${r.type||'-'}</td><td><b>${num(r.kg)}</b></td><td><span class="badge ${r.unit==='طن'?'ton':'kg'}">${r.unit||'كغ'}</span></td><td>${r.note||'-'}</td><td>${isViewing?'-':`<button class="btn danger" onclick="del('sadir',${D.sadir.indexOf(r)})">حذف</button>`}</td></tr>`).join('');
+  document.getElementById('tot-sadir-kg').textContent=num(rows.reduce((a,r)=>a+toKg(r.kg,r.unit),0));
+}
+
+function addSale(){
+  if(isViewing){alert('أنت في وضع العرض فقط');return;}
+  const name=v('sa-name'),kg=n('sa-kg'),price=n('sa-price'),unit=sel('sa-unit');
+  if(!name||!kg||!price){showMsg('sales','يرجى إدخال الزبون والكمية والسعر','err');return;}
+  const kgVal=unit==='طن'?kg*1000:kg;
+  D.sales.unshift({date:v('sa-date'),name,item:v('sa-item'),kg,unit,price,total:kgVal*price,pay:sel('sa-pay'),note:v('sa-note')});
+  save();renderSales();clr('sa-name','sa-item','sa-kg','sa-price','sa-note');document.getElementById('sa-total').value='';showMsg('sales','تم تسجيل المبيعة بنجاح ✓');
+}
+function renderSales(q=''){
+  const rows=q?D.sales.filter(r=>r.name.includes(q)):D.sales;
+  const tb=document.getElementById('tb-sales');
+  const pb={'كاش':'kash','آجل':'ajel','جزئي':'partial'};
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="11">لا توجد مبيعات مسجلة</td></tr>';document.getElementById('tot-sales').textContent='0';return;}
+  tb.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.date}</td><td><b>${r.name}</b></td><td>${r.item||'-'}</td><td>${num(r.kg)}</td><td><span class="badge ${r.unit==='طن'?'ton':'kg'}">${r.unit||'كغ'}</span></td><td>${num(r.price)}</td><td><b>${num(r.total)}</b></td><td><span class="badge ${pb[r.pay]||'kash'}">${r.pay}</span></td><td>${r.note||'-'}</td><td>${isViewing?'-':`<button class="btn danger" onclick="del('sales',${D.sales.indexOf(r)})">حذف</button>`}</td></tr>`).join('');
+  document.getElementById('tot-sales').textContent=num(rows.reduce((a,r)=>a+(+r.total||0),0));
+}
+
+function addBuy(){
+  if(isViewing){alert('أنت في وضع العرض فقط');return;}
+  const name=v('b-name'),amount=n('b-amount');
+  if(!name||!amount){showMsg('buys','يرجى إدخال المورد والمبلغ','err');return;}
+  D.buys.unshift({date:v('b-date'),name,item:v('b-item'),qty:v('b-qty'),amount,note:v('b-note')});
+  save();renderBuys();clr('b-name','b-item','b-qty','b-amount','b-note');showMsg('buys','تم تسجيل المشتراة بنجاح ✓');
+}
+function renderBuys(q=''){
+  const rows=q?D.buys.filter(r=>r.name.includes(q)):D.buys;
+  const tb=document.getElementById('tb-buys');
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="8">لا توجد مشتريات مسجلة</td></tr>';document.getElementById('tot-buys').textContent='0';return;}
+  tb.innerHTML=rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.date}</td><td><b>${r.name}</b></td><td>${r.item||'-'}</td><td>${r.qty||'-'}</td><td><b>${num(r.amount)}</b></td><td>${r.note||'-'}</td><td>${isViewing?'-':`<button class="btn danger" onclick="del('buys',${D.buys.indexOf(r)})">حذف</button>`}</td></tr>`).join('');
+  document.getElementById('tot-buys').textContent=num(rows.reduce((a,r)=>a+(+r.amount||0),0));
+}
+
+function addLoan(){
+  if(isViewing){alert('أنت في وضع العرض فقط');return;}
+  const name=v('l-name'),amount=n('l-amount');
+  if(!name||!amount){showMsg('loans','يرجى إدخال الاسم والمبلغ','err');return;}
+  D.loans.unshift({date:v('l-date'),name,amount,note:v('l-note'),status:'معلق'});
+  save();renderLoans();clr('l-name','l-amount','l-note');showMsg('loans','تم تسجيل السلفة بنجاح ✓');
+}
+function toggleLoan(idx){if(isViewing)return;D.loans[idx].status=D.loans[idx].status==='معلق'?'مسددة':'معلق';save();renderLoans();}
+function renderLoans(q=''){
+  const rows=q?D.loans.filter(r=>r.name.includes(q)):D.loans;
+  const tb=document.getElementById('tb-loans');
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="8">لا توجد سلف مسجلة</td></tr>';document.getElementById('tot-loans').textContent='0';return;}
+  tb.innerHTML=rows.map((r,i)=>{const ri=D.loans.indexOf(r);return`<tr><td>${i+1}</td><td>${r.date}</td><td><b>${r.name}</b></td><td><b>${num(r.amount)}</b></td><td>${r.note||'-'}</td><td><span class="badge ${r.status==='معلق'?'pending':'paid'}">${r.status}</span></td><td>${isViewing?'-':`<button class="btn ${r.status==='معلق'?'success':'warning'}" onclick="toggleLoan(${ri})">${r.status==='معلق'?'✓ تسديد':'↩ إلغاء'}</button>`}</td><td>${isViewing?'-':`<button class="btn danger" onclick="del('loans',${ri})">حذف</button>`}</td></tr>`;}).join('');
+  document.getElementById('tot-loans').textContent=num(rows.filter(r=>r.status==='معلق').reduce((a,r)=>a+(+r.amount||0),0));
+}
+
+function del(sec,idx){
+  if(isViewing)return;
+  if(confirm('هل تريد حذف هذا السجل؟')){D[sec].splice(idx,1);save();if(sec==='ward')renderWard();else if(sec==='sadir')renderSadir();else if(sec==='sales')renderSales();else if(sec==='buys')renderBuys();else if(sec==='loans')renderLoans();}
+}
+
+init();
+</script>
+</body>
+</html>
